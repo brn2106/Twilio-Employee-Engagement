@@ -1,0 +1,157 @@
+const ss = SpreadsheetApp.getActive();
+const contactsSheet = ss.getSheetByName('Contacts');
+const messageForm = ss.getSheetByName('Message');
+const settingsSheet = ss.getSheetByName('Setup');
+const statsSheet = ss.getSheetByName('Stats');
+const logsSheet = ss.getSheetByName('Logs');
+
+/*
+ * Creates the dropdown menu.
+ */
+function onOpen() {
+  let ui = SpreadsheetApp.getUi();
+  ui.createMenu("Twilio SMS")
+    .addItem("Send Messages", "confirmMessage")
+    .addItem("Fetch Stats", "fetchStats")
+    .addToUi();
+}
+
+/*
+ * Just pulling in account data from Setup sheet.
+ */
+function getAPIparams(){
+  let accountSID = settingsSheet.getRange(2, 2).getValue();
+  let key = settingsSheet.getRange(3, 2).getValue();
+  let secret = settingsSheet.getRange(4, 2).getValue();
+  let serviceSID = settingsSheet.getRange(5, 2).getValue();
+  let auth = Utilities.base64Encode(`${key}:${secret}`);
+  return {accountSID: accountSID, auth: auth, serviceSID: serviceSID}
+}
+
+/*
+ * Creates a public URL of the form to be shared with pre-pupoulated first field.
+ */
+function formURL(name, num) {
+  let formUrl = ss.getFormUrl();
+  let form = FormApp.openByUrl(formUrl);
+  let formResponse = form.createResponse();
+  let items = form.getItems();
+
+  let formItem = items[0].asTextItem();
+  let response = formItem.createResponse(name);
+  formResponse.withItemResponse(response);
+
+  let formItem1 = items[1].asTextItem();
+  let response1 = formItem1.createResponse(num);
+  formResponse.withItemResponse(response1);
+
+  return formResponse.toPrefilledUrl();
+}
+
+/*
+ * confirms the message to be sent out.
+ */
+function confirmMessage() {
+  let firstRecord = contactsSheet.getRange(2, 1, 1, 2).getValues()[0];
+  let msg = getMessage(formURL(firstRecord[0], firstRecord[1]), firstRecord[0]);
+  var confirm = Browser.msgBox('Starting SMS sender. Is this message correct?', msg, Browser.Buttons.YES_NO);
+  if(confirm!='yes') return;  
+  startSendingMessages();
+}
+
+/*
+ * Gets numbers from contacts sheet to push.
+ */
+async function startSendingMessages() {
+  // wipe out existing data from logs and stats.
+  logsSheet.getRange(2,1,10001, 2).clearContent();
+  statsSheet.getRange(2,1,100001, 5).clearContent();
+  
+  logsSheet.appendRow(["Started sending process."]);
+  statsSheet.activate();
+
+  let len = contactsSheet.getLastRow();
+  let phoneNumbers = contactsSheet.getRange(2, 1, len, 2).getValues();
+  await phoneNumbers.forEach(async function(num) {
+    if(!num[0] || !num[1]) return;
+    await SendMessage({
+      To: num[1],
+      Name: num[0],
+    });
+  });
+
+  logsSheet.appendRow(["Finished sending messages."]);
+
+  Utilities.sleep(10000)
+  fetchStats();
+}
+
+/*
+ * Triggers the Twilio SMS API with message to be sent per phone number.
+ */
+async function SendMessage(params) {
+  let apiParams = getAPIparams();
+
+  var formData = {
+    To: params.To,
+    Body: getMessage(formURL(params.Name, params.To), params.Name),
+    MessagingServiceSid: apiParams.serviceSID
+  };
+
+  var options = {
+    method: "post",
+    headers: {
+      Authorization: `Basic ${apiParams.auth}`
+    },
+    payload: formData
+  };
+
+  let resp = await UrlFetchApp.fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${apiParams.accountSID}/Messages.json`,
+    options
+  );
+  let msg = JSON.parse(resp.getContentText());
+
+  statsSheet.appendRow([params.To, msg.sid]);
+}
+
+/*
+ * creates the message to be sent.
+ */
+function getMessage(FORM_URL="", NAME="") {
+  let message = messageForm.getRange(2, 1).getValue().replace("{FORM_URL}", FORM_URL).replace("{NAME}", NAME);
+  Logger.log(message);
+  return message;
+}
+
+/**
+These functions support the pulling of Stats
+*/
+function fetchStats() {
+  logsSheet.appendRow(["Pulling statuses from logs."]);
+
+  const apiParams = getAPIparams();
+  const len = contactsSheet.getLastRow();
+  const options = {
+    method: "get",
+    headers: {
+      Authorization: `Basic ${apiParams.auth}`
+    }
+  };
+  const response = UrlFetchApp.fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${apiParams.accountSID}/Messages.json?PageSize=${(len-1)}`,
+    options
+  );
+
+  const json = response.getContentText();
+  const history = JSON.parse(json);
+
+  let messages = [];
+  history.messages.forEach(msg => {
+    messages.push([msg.to, msg.sid, msg.status, msg.error, msg.date_sent]);
+  });
+
+  messages = messages.reverse();
+  statsSheet.getRange(2,1,1001, 5).clearContent();
+  statsSheet.getRange(2, 1, messages.length, 5).setValues(messages);
+}
