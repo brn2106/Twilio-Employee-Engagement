@@ -7,8 +7,6 @@ Step 1. Create copy of this Google Sheet (Please do not skip this step): https:/
 
 Step 2. Along the toolbar at the top click Twilio SMS and navigate to Send Messages - this will ask you to authorize the application - follow the prompts to complete this.
 
-Step 3. Gain access to the linked Google Form (This is important, you will not be able to send messages if you do not also have permission to the form linked within the spreadsheet):
+Step 3. Follow Instructions in the Instructions tab of the sheet (Customizing form questions, adding Twilio information, etc.)
 
-Step 4. Follow Instructions in the Instructions tab of the sheet (Customizing form questions, adding Twilio information, etc.)
-
-Step 5. Send Employee Enagagment Messages!
+Step 4. Send Employee Enagagment Messages!
