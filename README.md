@@ -3,7 +3,7 @@ Here is everything you'll need to quickly enable your company to send Employee E
 
 Here are the few steps to deploy solution:
 
-Step 1. Create copy of this Google Sheet (Please do not skip this step): 
+Step 1. Create copy of this Google Sheet (Please do not skip this step): https://docs.google.com/spreadsheets/d/1gefQvojkjDE3PkE3uFaEQmm6GZeL4le4enkJLJsg0Ig/edit?usp=sharing
 
 Step 2. Along the toolbar at the top click Twilio SMS and navigate to Send Messages - this will ask you to authorize the application - follow the prompts to complete this.
 
