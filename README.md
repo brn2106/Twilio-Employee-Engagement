@@ -10,3 +10,5 @@ Step 2. Along the toolbar at the top click Twilio SMS and navigate to Send Messa
 Step 3. Follow Instructions in the Instructions tab of the sheet (Customizing form questions, adding Twilio information, etc.)
 
 Step 4. Send Employee Enagagment Messages!
+
+Video of Setup here: https://drive.google.com/a/twilio.com/file/d/1XX69sE__3UQfu35thDmMsi1Szt6ESakd/view?usp=sharing
